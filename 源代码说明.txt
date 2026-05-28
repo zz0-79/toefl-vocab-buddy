@@ -1,0 +1,26 @@
+词途 TOEFL 词汇学习伙伴 - 源代码清单
+========================================
+
+【核心源代码 - 必交】
+  index.html    页面结构与交互入口
+  styles.css    界面样式（响应式）
+  app.js        业务逻辑、API 调用、LocalStorage
+
+【文档 - 提交清单要求】
+  docs/方案解释文档.md
+  docs/演示视频拍摄脚本.md
+  提交清单.md
+  README.md
+
+【技术要点速查】
+  API 1: https://api.dictionaryapi.dev/api/v2/entries/en/{word}
+  API 2: https://api.adviceslip.com/advice
+  API 3: https://dog.ceo/api/breeds/image/random
+  存储: localStorage 键名 toefl_vocab_buddy_v1
+
+【本地运行】
+  cd toefl-vocab-buddy
+  python3 -m http.server 8080
+  浏览器打开 http://localhost:8080
+
+========================================
