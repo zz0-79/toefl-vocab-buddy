@@ -74,6 +74,7 @@
     <nav class="bottom-nav" role="tablist" aria-label="功能导航">
       <button type="button" class="nav-btn" data-view="review" role="tab">复习 <span id="navDueBadge" class="nav-badge hidden">0</span></button>
       <button type="button" class="nav-btn" data-view="wordbank" role="tab">词库</button>
+      <button type="button" class="nav-btn" data-view="ai" role="tab">AI 练习</button>
       <button type="button" class="nav-btn" data-view="more" role="tab">更多</button>
     </nav>
 
@@ -109,6 +110,77 @@
         <button type="button" class="tab" data-tab="srs">复习日程</button>
       </div>
       <ul id="wordList" class="word-list"></ul>
+    </div>
+
+    <div id="panelAI" class="bottom-panel hidden">
+      <h2 class="panel-title">AI 智能练习</h2>
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="aiChat">单词对话</button>
+        <button type="button" class="tab" data-tab="aiCefr">CEFR 朗读</button>
+      </div>
+
+      <!-- 单词对话子面板 -->
+      <div id="chatWordSelector" class="ai-sub-panel">
+        <p class="panel-desc">输入 5 个单词，AI 会用它们跟你聊天</p>
+        <div class="chat-word-selector">
+          <p class="hint">已选择的单词：</p>
+          <div id="selectedWordsChips" class="recent-chips"></div>
+          <div class="chat-input-words">
+            <input type="text" id="chatWordInput" class="word-input" placeholder="输入一个单词后按回车添加" autocomplete="off" />
+          </div>
+          <button type="button" id="startChatBtn" class="btn btn-primary btn-block" disabled>开始 AI 对话</button>
+        </div>
+      </div>
+
+      <div id="chatInterface" class="chat-interface hidden">
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chatInput" placeholder="输入消息..." autocomplete="off" />
+          <button type="button" id="sendChatBtn" class="btn btn-primary">发送</button>
+        </div>
+        <button type="button" id="exitChatBtn" class="btn btn-ghost btn-block btn-sm">退出对话</button>
+      </div>
+
+      <!-- CEFR 朗读子面板 -->
+      <div id="subPanelAiCefr" class="ai-sub-panel hidden">
+        <p class="panel-desc">听音辨位：选择等级并生成句子，听发音并拼写出来</p>
+        <div class="cefr-controls">
+          <select id="cefrLevel" class="cefr-select">
+            <option value="A1">A1 (入门)</option>
+            <option value="A2">A2 (初级)</option>
+            <option value="B1" selected>B1 (中级)</option>
+            <option value="B2">B2 (中高级)</option>
+            <option value="C1">C1 (高级)</option>
+          </select>
+          <button type="button" id="generateCefrBtn" class="btn btn-secondary">生成句子</button>
+        </div>
+        
+        <div id="cefrPracticeArea" class="cefr-practice hidden">
+          <div class="cefr-play-row">
+              <div class="speed-control">
+                <label for="cefrSpeed">语速: <span id="speedValue">0.8</span>x</label>
+                <input type="range" id="cefrSpeed" min="0.5" max="1.5" step="0.1" value="0.8">
+              </div>
+              <div class="cefr-audio-actions">
+                <button type="button" id="playCefrBtn" class="btn btn-ghost">🔊 播放</button>
+                <button type="button" id="pauseCefrBtn" class="btn btn-ghost">⏸ 暂停</button>
+              </div>
+              <p class="hint">听句子并在下方输入</p>
+            </div>
+          
+          <div id="cefrDictationBox" class="cefr-dictation-box">
+            <textarea id="cefrInput" placeholder="在此输入你听到的句子..." rows="3"></textarea>
+            <button type="button" id="submitCefrBtn" class="btn btn-success btn-block">检查对错</button>
+            
+            <div id="cefrResult" class="cefr-result hidden">
+              <p>准确率：<strong id="cefrAccuracy">0%</strong></p>
+              <div id="cefrDiff" class="cefr-diff"></div>
+              <p class="hint">正确答案已在上方标出（红色为遗漏/错误）</p>
+              <button type="button" id="resetCefrBtn" class="btn btn-ghost btn-block">换个句子</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="panelMore" class="bottom-panel hidden">

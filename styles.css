@@ -498,6 +498,190 @@ body {
 
 .quiz-panel .quiz-progress { font-size: 0.85rem; color: var(--muted); }
 
+/* AI 智能练习样式 */
+.ai-sub-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.chat-word-selector {
+  background: var(--bg);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--surface-2);
+}
+
+.ai-word-bank {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-2);
+}
+
+.ai-word-bank .recent-chips {
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  height: 350px;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--surface-2);
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.message {
+  max-width: 85%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.message.ai {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--text);
+  border-bottom-left-radius: 2px;
+}
+
+.message.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 2px;
+}
+
+.chat-input-row {
+  display: flex;
+  padding: 0.75rem;
+  background: var(--surface);
+  border-top: 1px solid var(--surface-2);
+  gap: 0.5rem;
+}
+
+.chat-input-row input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--surface-2);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  color: var(--text);
+  font-family: inherit;
+}
+
+.cefr-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.cefr-select {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--surface-2);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.4rem;
+  font-family: inherit;
+}
+
+.cefr-practice {
+  background: var(--bg);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--surface-2);
+}
+
+.cefr-play-row {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+}
+
+.speed-control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.speed-control input {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.cefr-audio-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.cefr-audio-actions .btn {
+  flex: 1;
+}
+
+.cefr-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.cefr-dictation-box textarea {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--surface-2);
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1rem;
+  resize: none;
+  margin-bottom: 0.75rem;
+}
+
+.cefr-result {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--surface-2);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.cefr-accuracy {
+  font-size: 1.5rem;
+  color: var(--success);
+}
+
+.cefr-diff {
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+  text-align: left;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.diff-correct { color: var(--text); }
+.diff-missing { color: var(--danger); text-decoration: line-through; }
+.diff-extra { color: var(--warning); }
+
 .quiz-question { font-weight: 600; margin: 0.5rem 0; }
 
 .quiz-options { display: flex; flex-direction: column; gap: 0.35rem; }
