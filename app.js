@@ -128,6 +128,7 @@ function defaultState() {
     gameBestScore: 0,
     totalReviews: 0,
     listOrder: { mastered: [], favorites: [] },
+    recentSearches: [],
   };
 }
 
@@ -264,6 +265,74 @@ function getDaysToQuiz() {
   return left;
 }
 
+function normalizeWord(raw) {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z'-]/g, "")
+    .replace(/^['-]+|['-]+$/g, "");
+}
+
+function addRecentSearch(word) {
+  if (!word) return;
+  if (!state.recentSearches) state.recentSearches = [];
+  state.recentSearches = [
+    word,
+    ...state.recentSearches.filter((w) => w !== word),
+  ].slice(0, 8);
+  saveState();
+  renderRecentSearches();
+}
+
+function renderRecentSearches() {
+  const el = document.getElementById("recentWords");
+  if (!el) return;
+  const list = state.recentSearches || [];
+  if (!list.length) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = list
+    .map(
+      (w) =>
+        `<button type="button" class="chip" data-word="${escapeHtml(w)}">${escapeHtml(w)}</button>`
+    )
+    .join("");
+  el.querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("wordInput").value = btn.dataset.word;
+      lookupFromInput();
+    });
+  });
+}
+
+async function lookupFromInput() {
+  const input = document.getElementById("wordInput");
+  const word = normalizeWord(input.value);
+  if (!word) {
+    showToast("请输入英文单词");
+    input.focus();
+    return;
+  }
+  input.value = word;
+  setStudyMode("learn");
+  addRecentSearch(word);
+  await loadWord(word, true);
+}
+
+function showIdleCard() {
+  const card = document.getElementById("wordCard");
+  card.classList.remove("loading", "error");
+  card.innerHTML =
+    '<p class="idle-text">在上方输入单词，或点「随机推荐一词」</p>';
+  currentWord = "";
+  currentAudioUrl = "";
+  ["playAudioBtn", "favoriteBtn", "masteredBtn"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = true;
+  });
+}
+
 function showToast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -307,8 +376,10 @@ async function fetchDictionary(word) {
 
 function setStudyMode(mode) {
   studyMode = mode;
-  document.getElementById("learnModeTag").textContent =
-    mode === "review" ? "📆 艾宾浩斯复习" : "✨ 新词学习";
+  const tag = document.getElementById("learnModeTag");
+  if (tag) {
+    tag.textContent = mode === "review" ? "复习模式" : "新词学习";
+  }
   document.getElementById("learnActions").classList.toggle("hidden", mode === "review");
   document.getElementById("reviewActions").classList.toggle("hidden", mode !== "review");
 }
@@ -379,6 +450,8 @@ async function loadWord(word, pushHistory = true) {
   });
 
   currentWord = word;
+  const input = document.getElementById("wordInput");
+  if (input) input.value = word;
   const due = getDueWords();
   if (due.includes(word)) setStudyMode("review");
   else if (studyMode === "review" && !due.includes(word)) setStudyMode("learn");
@@ -395,17 +468,10 @@ async function loadWord(word, pushHistory = true) {
       wordHistory.push(word);
       historyIndex = wordHistory.length - 1;
     }
-    updateNavButtons();
   } catch (e) {
     card.classList.add("error");
     card.innerHTML = `<p class="loading-text">加载失败：${escapeHtml(e.message)}</p>`;
   }
-}
-
-function updateNavButtons() {
-  document.getElementById("prevWordBtn").disabled = historyIndex <= 0;
-  document.getElementById("nextWordBtn").disabled =
-    historyIndex >= wordHistory.length - 1;
 }
 
 function updateFavoriteButton() {
@@ -452,23 +518,18 @@ function updateProgressUI() {
   }
   enc.textContent = parts.join(" · ");
 
-  updateFlywheelMsg();
+  const badge = document.getElementById("navDueBadge");
+  if (badge) {
+    if (due.length > 0) {
+      badge.textContent = due.length;
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+
   updateQuizBanner();
   updateCheckInButton();
-}
-
-function updateFlywheelMsg() {
-  const el = document.getElementById("flywheelMsg");
-  if (state.todayReviewCount > 0 && state.todayNewCount > 0) {
-    el.textContent =
-      "你今天同时完成了新词 + 复习——正在打破「记不住→不想背」的死循环！";
-  } else if (getDueWords().length > 0) {
-    el.textContent =
-      `有 ${getDueWords().length} 个词处于遗忘高危期（24h～一周内），优先复习比硬背新词更有效。`;
-  } else {
-    el.textContent =
-      "科学节奏：第 1 天学新词 → 第 2 天复习昨天 → 每 7 天周测。用对方法，才会有成就感。";
-  }
 }
 
 function updateGamificationUI() {
@@ -521,11 +582,11 @@ function renderDueList(due) {
 function updateCheckInButton() {
   const btn = document.getElementById("checkInBtn");
   if (state.checkedInToday) {
-    btn.textContent = "✓ 已打卡";
+    btn.textContent = "✓";
     btn.disabled = true;
     btn.classList.remove("pulse");
   } else {
-    btn.textContent = "今日打卡";
+    btn.textContent = "打卡";
     btn.disabled = false;
     btn.classList.add("pulse");
   }
@@ -747,6 +808,7 @@ function bindDrag(li) {
 
 function updateQuizBanner() {
   const banner = document.getElementById("quizBanner");
+  if (!banner) return;
   const days = getDaysToQuiz();
   const ready =
     state.mastered.length >= 5 &&
@@ -943,6 +1005,9 @@ function clearAllData() {
   updateProgressUI();
   updateGamificationUI();
   renderWordList();
+  renderRecentSearches();
+  showIdleCard();
+  document.getElementById("wordInput").value = "";
   showToast("已清空");
 }
 
@@ -951,16 +1016,38 @@ function playAudio() {
 }
 
 function initEvents() {
+  document.getElementById("lookupBtn").addEventListener("click", lookupFromInput);
+  document.getElementById("wordInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      lookupFromInput();
+    }
+  });
   document.getElementById("randomWordBtn").addEventListener("click", () => {
     setStudyMode("learn");
-    loadWord(pickRandomNewWord(), true);
+    const w = pickRandomNewWord();
+    document.getElementById("wordInput").value = w;
+    addRecentSearch(w);
+    loadWord(w, true);
   });
-  document.getElementById("prevWordBtn").addEventListener("click", () => {
-    if (historyIndex > 0) loadWord(wordHistory[--historyIndex], false);
-  });
-  document.getElementById("nextWordBtn").addEventListener("click", () => {
-    if (historyIndex < wordHistory.length - 1)
-      loadWord(wordHistory[++historyIndex], false);
+
+  document.querySelectorAll(".nav-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view;
+      const panelId = {
+        review: "panelReview",
+        wordbank: "panelWordbank",
+        more: "panelMore",
+      }[view];
+      const panel = document.getElementById(panelId);
+      const isOpen = btn.classList.contains("active") && panel && !panel.classList.contains("hidden");
+      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".bottom-panel").forEach((p) => p.classList.add("hidden"));
+      if (!isOpen) {
+        btn.classList.add("active");
+        panel.classList.remove("hidden");
+      }
+    });
   });
   document.getElementById("playAudioBtn").addEventListener("click", playAudio);
   document.getElementById("playAudioReviewBtn").addEventListener("click", playAudio);
@@ -974,6 +1061,7 @@ function initEvents() {
     if (due.length) {
       setStudyMode("review");
       loadWord(due[0], true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
   document.getElementById("startQuizBtn").addEventListener("click", startWeeklyQuiz);
@@ -1009,14 +1097,17 @@ function initEvents() {
 }
 
 function init() {
+  if (!state.recentSearches) state.recentSearches = [];
   resetTodayIfNeeded();
   setStudyMode("learn");
   updateProgressUI();
   updateGamificationUI();
   restoreMoodUI();
   renderWordList();
+  renderRecentSearches();
   initEvents();
-  loadWord(pickRandomNewWord(), true);
+  showIdleCard();
+  document.getElementById("wordInput").focus();
 }
 
 init();
