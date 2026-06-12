@@ -3,228 +3,197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>词途 · TOEFL 词汇伙伴</title>
+  <title>词途 · 小李的 TOEFL 词汇伙伴</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
     <header class="header">
       <div class="brand">
-        <h1>词途</h1>
-        <p class="tagline">输入生词 · 科学复习</p>
+        <span class="logo" aria-hidden="true">📖</span>
+        <div>
+          <h1>词途</h1>
+          <p class="tagline">科学复习 + 游戏激励 · 打破「记不住→不想背」</p>
+        </div>
       </div>
-      <div class="header-meta">
-        <span class="meta-item">今日 <strong id="todayCount">0</strong>/<strong id="goalDisplay">3</strong></span>
-        <span class="meta-item">🔥 <strong id="streakCount">0</strong> 天</span>
-        <span class="meta-item">Lv.<strong id="levelDisplay">1</strong></span>
-        <button type="button" id="checkInBtn" class="btn btn-checkin btn-sm">打卡</button>
+      <div class="header-stats">
+        <div class="stat-pill gold" title="经验值">
+          <span class="stat-label">Lv.</span>
+          <strong id="levelDisplay">1</strong>
+          <span>· <strong id="xpDisplay">0</strong> XP</span>
+        </div>
+        <div class="stat-pill" title="连续打卡">
+          <span class="stat-label">🔥</span>
+          <strong id="streakCount">0</strong>
+          <span>天</span>
+        </div>
+        <div class="stat-pill accent">
+          <span class="stat-label">新词</span>
+          <strong id="todayCount">0</strong>
+          <span>/ <span id="goalDisplay">3</span></span>
+        </div>
+        <button type="button" id="checkInBtn" class="btn btn-checkin">今日打卡</button>
       </div>
     </header>
 
-    <!-- 核心：查词输入 -->
-    <section class="search-hero" aria-labelledby="search-label">
-      <label id="search-label" for="wordInput">输入单词（阅读 / 作业里遇到的生词）</label>
-      <div class="search-row">
-        <input
-          type="text"
-          id="wordInput"
-          class="word-input"
-          placeholder="例如 ambiguous"
-          autocomplete="off"
-          spellcheck="false"
-          enterkeyhint="search"
-        />
-        <button type="button" id="lookupBtn" class="btn btn-primary">查询</button>
+    <section class="panel flywheel-panel" aria-labelledby="flywheel-heading">
+      <h2 id="flywheel-heading">正向循环 · 告别死记硬背</h2>
+      <div class="flywheel" aria-hidden="true">
+        <span class="fly-step active">用对方法</span>
+        <span class="fly-arrow">→</span>
+        <span class="fly-step">背得住</span>
+        <span class="fly-arrow">→</span>
+        <span class="fly-step">有成就感</span>
+        <span class="fly-arrow">→</span>
+        <span class="fly-step">更愿意背</span>
       </div>
-      <div id="recentWords" class="recent-chips" aria-label="最近查询"></div>
+      <p id="flywheelMsg" class="flywheel-msg">艾宾浩斯告诉我们：学完 24 小时内、第一周内复习，最能对抗遗忘。</p>
     </section>
 
-    <!-- 主学习区 -->
-    <section class="learn-focus" aria-live="polite">
-      <div class="focus-toolbar">
-        <span id="learnModeTag" class="mode-tag">新词学习</span>
-        <button type="button" id="randomWordBtn" class="btn-text">或：随机推荐一词 →</button>
-      </div>
-
-      <div id="wordCard" class="word-card loading">
-        <p class="loading-text">输入单词并点「查询」，或点随机推荐</p>
-      </div>
-
-      <div class="word-actions" id="learnActions">
-        <button type="button" id="playAudioBtn" class="btn btn-ghost" disabled>🔊 发音</button>
-        <button type="button" id="favoriteBtn" class="btn btn-ghost" disabled>☆ 收藏</button>
-        <button type="button" id="masteredBtn" class="btn btn-success" disabled>✓ 已掌握</button>
-      </div>
-      <div class="word-actions hidden" id="reviewActions">
-        <button type="button" id="playAudioReviewBtn" class="btn btn-ghost" disabled>🔊 发音</button>
-        <button type="button" id="reviewPassBtn" class="btn btn-success">记住了</button>
-        <button type="button" id="reviewFailBtn" class="btn btn-ghost">忘了</button>
-      </div>
-
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" id="dailyProgressBar" style="width: 0%"></div>
-      </div>
-      <p id="encouragement" class="encouragement"></p>
-    </section>
-
-    <!-- 底部导航：收起次要功能 -->
-    <nav class="bottom-nav" role="tablist" aria-label="功能导航">
-      <button type="button" class="nav-btn" data-view="review" role="tab">复习 <span id="navDueBadge" class="nav-badge hidden">0</span></button>
-      <button type="button" class="nav-btn" data-view="wordbank" role="tab">词库</button>
-      <button type="button" class="nav-btn" data-view="ai" role="tab">AI 练习</button>
-      <button type="button" class="nav-btn" data-view="more" role="tab">更多</button>
-    </nav>
-
-    <div id="panelReview" class="bottom-panel hidden">
-      <h2 class="panel-title">艾宾浩斯复习</h2>
-      <p class="panel-desc">第 2 天复习昨天学的词 · 遗忘高峰在 24 小时内</p>
-      <div class="srs-inline">
-        <span>待复习 <strong id="dueReviewCount">0</strong></span>
-        <span>已复习 <strong id="todayReviewDone">0</strong></span>
-        <span>距周测 <strong id="daysToQuiz">—</strong></span>
+    <section class="panel srs-panel" aria-labelledby="srs-heading">
+      <h2 id="srs-heading">📅 艾宾浩斯复习计划</h2>
+      <p class="hint">第 1 天学新词 → 第 2 天复习昨天 → 第 3/7/14 天巩固 · 每 7 天小测验</p>
+      <div class="srs-stats">
+        <div class="srs-stat">
+          <strong id="dueReviewCount">0</strong>
+          <span>今日待复习</span>
+        </div>
+        <div class="srs-stat">
+          <strong id="todayReviewDone">0</strong>
+          <span>今日已复习</span>
+        </div>
+        <div class="srs-stat highlight">
+          <strong id="daysToQuiz">—</strong>
+          <span>距周测</span>
+        </div>
       </div>
       <ul id="dueReviewList" class="due-list"></ul>
-      <button type="button" id="startReviewBtn" class="btn btn-secondary btn-block" disabled>开始复习</button>
-      <div id="quizBanner" class="quiz-inline hidden">
-        <button type="button" id="startQuizBtn" class="btn btn-primary btn-block">开始周测（5 题）</button>
+      <button type="button" id="startReviewBtn" class="btn btn-secondary btn-block" disabled>
+        开始复习第一个到期词
+      </button>
+    </section>
+
+    <div id="badgeRow" class="badge-row" aria-label="成就徽章"></div>
+
+    <section class="panel mood-panel" aria-labelledby="mood-heading">
+      <h2 id="mood-heading">今天心情如何？</h2>
+      <p class="hint">选一下心情，我们会记住并给你合适的鼓励</p>
+      <div class="mood-grid" role="group" aria-label="心情选择">
+        <button type="button" class="mood-btn" data-mood="great" title="很好">😊</button>
+        <button type="button" class="mood-btn" data-mood="ok" title="还行">😐</button>
+        <button type="button" class="mood-btn" data-mood="tired" title="疲惫">😩</button>
+        <button type="button" class="mood-btn" data-mood="anxious" title="焦虑">😰</button>
       </div>
-      <section id="quizPanel" class="quiz-panel hidden" aria-live="polite">
-        <p class="quiz-progress"><span id="quizIndex">1</span> / <span id="quizTotal">5</span></p>
-        <p id="quizQuestion" class="quiz-question"></p>
-        <div id="quizOptions" class="quiz-options"></div>
-        <p id="quizFeedback" class="quiz-feedback"></p>
+      <p id="moodFeedback" class="mood-feedback" hidden></p>
+    </section>
+
+    <section class="panel goal-panel">
+      <label for="dailyGoal">每日新词目标（建议循序渐进：先 3～5，熟练后可调到 30）</label>
+      <div class="goal-row">
+        <input type="range" id="dailyGoal" min="1" max="30" value="3" />
+        <output id="goalOutput" for="dailyGoal">3</output>
+        <button type="button" id="saveGoalBtn" class="btn btn-ghost">保存目标</button>
+      </div>
+      <div class="xp-bar-wrap" title="升级进度">
+        <div class="xp-bar" id="xpBar" style="width: 0%"></div>
+      </div>
+      <p class="hint xp-hint">掌握 +10 XP · 复习成功 +15 XP · 打卡 +5 XP · 周测答对 +20 XP</p>
+    </section>
+
+    <section id="quizBanner" class="panel quiz-banner hidden">
+      <h2>🎯 本周词汇小测验</h2>
+      <p class="hint">每 7～10 天总复习一次，检验真实掌握程度（至少 5 个已学词后开放）</p>
+      <button type="button" id="startQuizBtn" class="btn btn-primary btn-block">开始周测（5 题）</button>
+    </section>
+
+    <section id="quizPanel" class="panel quiz-panel hidden" aria-live="polite">
+      <h2>周测进行中</h2>
+      <p class="quiz-progress"><span id="quizIndex">1</span> / <span id="quizTotal">5</span></p>
+      <p id="quizQuestion" class="quiz-question"></p>
+      <div id="quizOptions" class="quiz-options"></div>
+      <p id="quizFeedback" class="quiz-feedback"></p>
+    </section>
+
+    <main class="main-grid">
+      <section class="panel word-panel" aria-live="polite">
+        <div id="learnModeTag" class="mode-tag">新词学习</div>
+        <div class="word-toolbar">
+          <button type="button" id="prevWordBtn" class="btn btn-ghost" disabled>← 上一个</button>
+          <button type="button" id="randomWordBtn" class="btn btn-primary">学新词</button>
+          <button type="button" id="nextWordBtn" class="btn btn-ghost">下一个 →</button>
+        </div>
+
+        <div id="wordCard" class="word-card loading">
+          <p class="loading-text">正在从词典获取单词…</p>
+        </div>
+
+        <div class="word-actions" id="learnActions">
+          <button type="button" id="playAudioBtn" class="btn btn-ghost" disabled>🔊 播放发音</button>
+          <button type="button" id="favoriteBtn" class="btn btn-ghost" disabled>☆ 收藏</button>
+          <button type="button" id="masteredBtn" class="btn btn-success" disabled>✓ 标记已掌握</button>
+        </div>
+
+        <div class="word-actions hidden" id="reviewActions">
+          <button type="button" id="playAudioReviewBtn" class="btn btn-ghost" disabled>🔊 播放发音</button>
+          <button type="button" id="reviewPassBtn" class="btn btn-success">✓ 记住了（+15 XP）</button>
+          <button type="button" id="reviewFailBtn" class="btn btn-ghost">✗ 忘了，明天再复习</button>
+        </div>
+
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="dailyProgressBar" style="width: 0%"></div>
+        </div>
+        <p id="encouragement" class="encouragement"></p>
       </section>
-    </div>
 
-    <div id="panelWordbank" class="bottom-panel hidden">
-      <div class="list-header">
-        <h2 class="panel-title">我的词库</h2>
-        <button type="button" id="clearAllBtn" class="btn btn-danger btn-sm">清空</button>
-      </div>
-      <div class="tabs">
-        <button type="button" class="tab active" data-tab="mastered">已掌握</button>
-        <button type="button" class="tab" data-tab="favorites">收藏</button>
-        <button type="button" class="tab" data-tab="srs">复习日程</button>
-      </div>
-      <ul id="wordList" class="word-list"></ul>
-    </div>
-
-    <div id="panelAI" class="bottom-panel hidden">
-      <h2 class="panel-title">AI 智能练习</h2>
-      <div class="tabs">
-        <button type="button" class="tab active" data-tab="aiChat">单词对话</button>
-        <button type="button" class="tab" data-tab="aiCefr">CEFR 朗读</button>
-      </div>
-
-      <!-- 单词对话子面板 -->
-      <div id="chatWordSelector" class="ai-sub-panel">
-        <p class="panel-desc">输入 5 个单词，AI 会用它们跟你聊天</p>
-        <div class="chat-word-selector">
-          <p class="hint">已选择的单词：</p>
-          <div id="selectedWordsChips" class="recent-chips"></div>
-          <div class="chat-input-words">
-            <input type="text" id="chatWordInput" class="word-input" placeholder="输入一个单词后按回车添加" autocomplete="off" />
+      <aside class="sidebar">
+        <section class="panel game-panel">
+          <h2>🏆 词汇闯关</h2>
+          <p class="hint">小游戏：看单词选释义，答对赚 XP（需至少 4 个已学词）</p>
+          <p id="gameScore" class="game-score">最高分：<strong>0</strong></p>
+          <button type="button" id="startGameBtn" class="btn btn-secondary btn-block">开始闯关</button>
+          <div id="gameArea" class="game-area hidden">
+            <p id="gameWord" class="game-word"></p>
+            <div id="gameOptions" class="quiz-options"></div>
           </div>
-          <button type="button" id="startChatBtn" class="btn btn-primary btn-block" disabled>开始 AI 对话</button>
-        </div>
-      </div>
+        </section>
 
-      <div id="chatInterface" class="chat-interface hidden">
-        <div id="chatMessages" class="chat-messages"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chatInput" placeholder="输入消息..." autocomplete="off" />
-          <button type="button" id="sendChatBtn" class="btn btn-primary">发送</button>
-        </div>
-        <button type="button" id="exitChatBtn" class="btn btn-ghost btn-block btn-sm">退出对话</button>
-      </div>
+        <section class="panel api-panel">
+          <h2>微习惯挑战</h2>
+          <p class="hint">来自互联网的随机建议，降低启动难度</p>
+          <blockquote id="adviceText" class="quote-box">点击按钮获取今日微行动</blockquote>
+          <button type="button" id="fetchAdviceBtn" class="btn btn-secondary btn-block">获取挑战建议</button>
+        </section>
 
-      <!-- CEFR 朗读子面板 -->
-      <div id="subPanelAiCefr" class="ai-sub-panel hidden">
-        <p class="panel-desc">听音辨位：选择等级并生成句子，听发音并拼写出来</p>
-        <div class="cefr-controls">
-          <select id="cefrLevel" class="cefr-select">
-            <option value="A1">A1 (入门)</option>
-            <option value="A2">A2 (初级)</option>
-            <option value="B1" selected>B1 (中级)</option>
-            <option value="B2">B2 (中高级)</option>
-            <option value="C1">C1 (高级)</option>
-          </select>
-          <button type="button" id="generateCefrBtn" class="btn btn-secondary">生成句子</button>
-        </div>
-        
-        <div id="cefrPracticeArea" class="cefr-practice hidden">
-          <div class="cefr-play-row">
-              <div class="speed-control">
-                <label for="cefrSpeed">语速: <span id="speedValue">0.8</span>x</label>
-                <input type="range" id="cefrSpeed" min="0.5" max="1.5" step="0.1" value="0.8">
-              </div>
-              <div class="cefr-audio-actions">
-                <button type="button" id="playCefrBtn" class="btn btn-ghost">🔊 播放</button>
-                <button type="button" id="pauseCefrBtn" class="btn btn-ghost">⏸ 暂停</button>
-              </div>
-              <p class="hint">听句子并在下方输入</p>
-            </div>
-          
-          <div id="cefrDictationBox" class="cefr-dictation-box">
-            <textarea id="cefrInput" placeholder="在此输入你听到的句子..." rows="3"></textarea>
-            <button type="button" id="submitCefrBtn" class="btn btn-success btn-block">检查对错</button>
-            
-            <div id="cefrResult" class="cefr-result hidden">
-              <p>准确率：<strong id="cefrAccuracy">0%</strong></p>
-              <div id="cefrDiff" class="cefr-diff"></div>
-              <p class="hint">正确答案已在上方标出（红色为遗漏/错误）</p>
-              <button type="button" id="resetCefrBtn" class="btn btn-ghost btn-block">换个句子</button>
-            </div>
+        <section class="panel api-panel">
+          <h2>减压一刻</h2>
+          <p class="hint">学累了？看看随机治愈图（API 实时获取）</p>
+          <div id="relaxImageWrap" class="relax-wrap">
+            <p class="placeholder">点击下方按钮加载图片</p>
           </div>
-        </div>
-      </div>
-    </div>
+          <button type="button" id="fetchRelaxBtn" class="btn btn-secondary btn-block">换一张治愈图</button>
+        </section>
 
-    <div id="panelMore" class="bottom-panel hidden">
-      <details class="more-block" open>
-        <summary>今日状态</summary>
-        <div class="mood-grid" role="group">
-          <button type="button" class="mood-btn" data-mood="great">😊</button>
-          <button type="button" class="mood-btn" data-mood="ok">😐</button>
-          <button type="button" class="mood-btn" data-mood="tired">😩</button>
-          <button type="button" class="mood-btn" data-mood="anxious">😰</button>
-        </div>
-        <p id="moodFeedback" class="mood-feedback" hidden></p>
-        <label for="dailyGoal">每日新词目标</label>
-        <div class="goal-row">
-          <input type="range" id="dailyGoal" min="1" max="30" value="3" />
-          <output id="goalOutput" for="dailyGoal">3</output>
-          <button type="button" id="saveGoalBtn" class="btn btn-ghost btn-sm">保存</button>
-        </div>
-        <div class="xp-bar-wrap"><div class="xp-bar" id="xpBar" style="width: 0%"></div></div>
-        <p class="hint">XP <strong id="xpDisplay">0</strong> · 掌握+10 · 复习+15</p>
-        <div id="badgeRow" class="badge-row"></div>
-      </details>
-
-      <details class="more-block">
-        <summary>词汇闯关</summary>
-        <p id="gameScore" class="hint">最高分：<strong>0</strong></p>
-        <button type="button" id="startGameBtn" class="btn btn-secondary btn-block">开始闯关</button>
-        <div id="gameArea" class="game-area hidden">
-          <p id="gameWord" class="game-word"></p>
-          <div id="gameOptions" class="quiz-options"></div>
-        </div>
-      </details>
-
-      <details class="more-block">
-        <summary>微习惯 & 减压（API）</summary>
-        <blockquote id="adviceText" class="quote-box">点击获取建议</blockquote>
-        <button type="button" id="fetchAdviceBtn" class="btn btn-secondary btn-block">获取建议</button>
-        <div id="relaxImageWrap" class="relax-wrap"><p class="placeholder">治愈图</p></div>
-        <button type="button" id="fetchRelaxBtn" class="btn btn-secondary btn-block">换治愈图</button>
-      </details>
-    </div>
+        <section class="panel list-panel">
+          <div class="list-header">
+            <h2>我的词库</h2>
+            <button type="button" id="clearAllBtn" class="btn btn-danger btn-sm">清空记录</button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button type="button" class="tab active" data-tab="mastered" role="tab">已掌握</button>
+            <button type="button" class="tab" data-tab="favorites" role="tab">收藏</button>
+            <button type="button" class="tab" data-tab="srs" role="tab">复习日程</button>
+          </div>
+          <ul id="wordList" class="word-list"></ul>
+          <p class="drag-hint">💡 拖拽可调复习顺序 · 点击词条可查看</p>
+        </section>
+      </aside>
+    </main>
 
     <footer class="footer">
-      <p>数据保存在本机 · <a href="https://github.com/zz0-79/toefl-vocab-buddy" target="_blank" rel="noopener">GitHub</a></p>
+      <p>为渴望进步的小李设计 · 艾宾浩斯 + 游戏化 · 数据保存在本机浏览器</p>
     </footer>
   </div>
 

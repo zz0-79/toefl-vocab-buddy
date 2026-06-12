@@ -95,64 +95,12 @@ const MOOD_MESSAGES = {
   anxious: "别硬背。完成 1 个复习 + 打卡，就算打破「不想背」的循环。",
 };
 
-// CEFR 句子生成模板（根据不同等级生成不同难度）
-const CEFR_TEMPLATES = {
-  A1: [
-    "I like to study English.",
-    "The cat is on the table.",
-    "I have a big family.",
-    "The weather is nice today.",
-    "I go to school by bus.",
-  ],
-  A2: [
-    "Learning English is a great adventure.",
-    "I want to express my ideas clearly.",
-    "Yesterday was my birthday party.",
-    "We built a big sandcastle today.",
-    "I miss my best friend very much.",
-  ],
-  B1: [
-    "Developing a study habit is crucial.",
-    "Research shows that repetition is effective.",
-    "The internet has changed how we talk.",
-    "Music education improves cognitive abilities.",
-    "It is important to respect local customs.",
-  ],
-  B2: [
-    "Globalization has a complex impact on economies.",
-    "Social media has revolutionized marketing strategies.",
-    "AI offers personalized learning experiences.",
-    "Habit formation follows a predictable pattern.",
-    "Urban planning influences our quality of life.",
-  ],
-  C1: [
-    "Natural language often contains inherent ambiguity.",
-    "Scholars must be cognizant of subtle nuances.",
-    "Neuroplasticity demonstrates the brain's capacity.",
-    "Consequentialist theories evaluate actions by outcomes.",
-    "Geopolitical tensions stem from resource allocation.",
-  ],
-};
-
-const CHAT_TEMPLATES = [
-  "That's a very interesting perspective on {word}. How do you think it relates to our current topic?",
-  "I've noticed that {word} is often used in academic contexts. Can you give me another example of how you might use it?",
-  "Wait, did you mean {word}? That's a great choice! It really adds a lot of depth to your argument.",
-  "I completely agree. The concept of {word} is fundamental to understanding this issue. What else comes to mind?",
-  "Let's try to incorporate {word} into a sentence about your daily life. How would that look?",
-];
-
 let state = loadState();
 let currentWord = "";
 let currentAudioUrl = "";
 let wordHistory = [];
 let historyIndex = -1;
 let activeListTab = "mastered";
-let activeAiTab = "aiChat";
-let selectedChatWords = [];
-let chatCurrentWordIndex = 0;
-let cefrCurrentText = "";
-let cefrPlayCount = 0;
 let studyMode = "learn"; // learn | review
 let quizSession = null;
 let totalReviewDone = 0;
@@ -180,7 +128,6 @@ function defaultState() {
     gameBestScore: 0,
     totalReviews: 0,
     listOrder: { mastered: [], favorites: [] },
-    recentSearches: [],
   };
 }
 
@@ -317,74 +264,6 @@ function getDaysToQuiz() {
   return left;
 }
 
-function normalizeWord(raw) {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z'-]/g, "")
-    .replace(/^['-]+|['-]+$/g, "");
-}
-
-function addRecentSearch(word) {
-  if (!word) return;
-  if (!state.recentSearches) state.recentSearches = [];
-  state.recentSearches = [
-    word,
-    ...state.recentSearches.filter((w) => w !== word),
-  ].slice(0, 8);
-  saveState();
-  renderRecentSearches();
-}
-
-function renderRecentSearches() {
-  const el = document.getElementById("recentWords");
-  if (!el) return;
-  const list = state.recentSearches || [];
-  if (!list.length) {
-    el.innerHTML = "";
-    return;
-  }
-  el.innerHTML = list
-    .map(
-      (w) =>
-        `<button type="button" class="chip" data-word="${escapeHtml(w)}">${escapeHtml(w)}</button>`
-    )
-    .join("");
-  el.querySelectorAll(".chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      document.getElementById("wordInput").value = btn.dataset.word;
-      lookupFromInput();
-    });
-  });
-}
-
-async function lookupFromInput() {
-  const input = document.getElementById("wordInput");
-  const word = normalizeWord(input.value);
-  if (!word) {
-    showToast("请输入英文单词");
-    input.focus();
-    return;
-  }
-  input.value = word;
-  setStudyMode("learn");
-  addRecentSearch(word);
-  await loadWord(word, true);
-}
-
-function showIdleCard() {
-  const card = document.getElementById("wordCard");
-  card.classList.remove("loading", "error");
-  card.innerHTML =
-    '<p class="idle-text">在上方输入单词，或点「随机推荐一词」</p>';
-  currentWord = "";
-  currentAudioUrl = "";
-  ["playAudioBtn", "favoriteBtn", "masteredBtn"].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = true;
-  });
-}
-
 function showToast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -428,10 +307,8 @@ async function fetchDictionary(word) {
 
 function setStudyMode(mode) {
   studyMode = mode;
-  const tag = document.getElementById("learnModeTag");
-  if (tag) {
-    tag.textContent = mode === "review" ? "复习模式" : "新词学习";
-  }
+  document.getElementById("learnModeTag").textContent =
+    mode === "review" ? "📆 艾宾浩斯复习" : "✨ 新词学习";
   document.getElementById("learnActions").classList.toggle("hidden", mode === "review");
   document.getElementById("reviewActions").classList.toggle("hidden", mode !== "review");
 }
@@ -502,8 +379,6 @@ async function loadWord(word, pushHistory = true) {
   });
 
   currentWord = word;
-  const input = document.getElementById("wordInput");
-  if (input) input.value = word;
   const due = getDueWords();
   if (due.includes(word)) setStudyMode("review");
   else if (studyMode === "review" && !due.includes(word)) setStudyMode("learn");
@@ -520,10 +395,17 @@ async function loadWord(word, pushHistory = true) {
       wordHistory.push(word);
       historyIndex = wordHistory.length - 1;
     }
+    updateNavButtons();
   } catch (e) {
     card.classList.add("error");
     card.innerHTML = `<p class="loading-text">加载失败：${escapeHtml(e.message)}</p>`;
   }
+}
+
+function updateNavButtons() {
+  document.getElementById("prevWordBtn").disabled = historyIndex <= 0;
+  document.getElementById("nextWordBtn").disabled =
+    historyIndex >= wordHistory.length - 1;
 }
 
 function updateFavoriteButton() {
@@ -570,18 +452,23 @@ function updateProgressUI() {
   }
   enc.textContent = parts.join(" · ");
 
-  const badge = document.getElementById("navDueBadge");
-  if (badge) {
-    if (due.length > 0) {
-      badge.textContent = due.length;
-      badge.classList.remove("hidden");
-    } else {
-      badge.classList.add("hidden");
-    }
-  }
-
+  updateFlywheelMsg();
   updateQuizBanner();
   updateCheckInButton();
+}
+
+function updateFlywheelMsg() {
+  const el = document.getElementById("flywheelMsg");
+  if (state.todayReviewCount > 0 && state.todayNewCount > 0) {
+    el.textContent =
+      "你今天同时完成了新词 + 复习——正在打破「记不住→不想背」的死循环！";
+  } else if (getDueWords().length > 0) {
+    el.textContent =
+      `有 ${getDueWords().length} 个词处于遗忘高危期（24h～一周内），优先复习比硬背新词更有效。`;
+  } else {
+    el.textContent =
+      "科学节奏：第 1 天学新词 → 第 2 天复习昨天 → 每 7 天周测。用对方法，才会有成就感。";
+  }
 }
 
 function updateGamificationUI() {
@@ -634,11 +521,11 @@ function renderDueList(due) {
 function updateCheckInButton() {
   const btn = document.getElementById("checkInBtn");
   if (state.checkedInToday) {
-    btn.textContent = "✓";
+    btn.textContent = "✓ 已打卡";
     btn.disabled = true;
     btn.classList.remove("pulse");
   } else {
-    btn.textContent = "打卡";
+    btn.textContent = "今日打卡";
     btn.disabled = false;
     btn.classList.add("pulse");
   }
@@ -860,7 +747,6 @@ function bindDrag(li) {
 
 function updateQuizBanner() {
   const banner = document.getElementById("quizBanner");
-  if (!banner) return;
   const days = getDaysToQuiz();
   const ready =
     state.mastered.length >= 5 &&
@@ -1057,9 +943,6 @@ function clearAllData() {
   updateProgressUI();
   updateGamificationUI();
   renderWordList();
-  renderRecentSearches();
-  showIdleCard();
-  document.getElementById("wordInput").value = "";
   showToast("已清空");
 }
 
@@ -1067,290 +950,18 @@ function playAudio() {
   if (currentAudioUrl) new Audio(currentAudioUrl).play();
 }
 
-// --- AI 练习逻辑 ---
-
-function renderSelectedWordsChips() {
-  const el = document.getElementById("selectedWordsChips");
-  if (!el) return;
-  
-  if (!selectedChatWords.length) {
-    el.innerHTML = '<p class="hint">输入单词来添加（需 5 个）</p>';
-  } else {
-    el.innerHTML = selectedChatWords
-      .map(
-        (w) =>
-          `<button type="button" class="chip selected" data-word="${escapeHtml(w)}">${escapeHtml(w)} ✕</button>`
-      )
-      .join("");
-    el.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedChatWords = selectedChatWords.filter((w) => w !== btn.dataset.word);
-        renderSelectedWordsChips();
-      });
-    });
-  }
-
-  document.getElementById("startChatBtn").disabled = selectedChatWords.length !== 5;
-}
-
-function addChatWordFromInput() {
-  const input = document.getElementById("chatWordInput");
-  const word = normalizeWord(input.value.trim());
-  if (!word) {
-    showToast("请输入有效的英文单词");
-    return;
-  }
-  if (selectedChatWords.length >= 5) {
-    showToast("最多只能添加 5 个单词");
-    return;
-  }
-  if (selectedChatWords.includes(word)) {
-    showToast("这个单词已经添加了");
-    return;
-  }
-  selectedChatWords.push(word);
-  input.value = "";
-  renderSelectedWordsChips();
-}
-
-function startAiChat() {
-  if (selectedChatWords.length !== 5) {
-    showToast("请先输入 5 个单词");
-    return;
-  }
-  chatCurrentWordIndex = 0; // 重置单词索引
-  document.getElementById("chatWordSelector").classList.add("hidden");
-  document.getElementById("chatInterface").classList.remove("hidden");
-  document.getElementById("chatMessages").innerHTML = "";
-  
-  // 第一句话直接切入第一个词
-  const firstWord = selectedChatWords[0];
-  const intro = `Hello! I'm your AI partner. Let's start our conversation. To begin with, I was thinking about the concept of "${firstWord}". It's quite fascinating, don't you think? How would you describe your experience with it?`;
-  appendChatMessage("ai", intro);
-}
-
-function appendChatMessage(role, text) {
-  const container = document.getElementById("chatMessages");
-  const msg = document.createElement("div");
-  msg.className = `message ${role}`;
-  msg.textContent = text;
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-}
-
-function handleChatSend() {
-  const input = document.getElementById("chatInput");
-  const text = input.value.trim();
-  if (!text) return;
-  
-  appendChatMessage("user", text);
-  input.value = "";
-  
-  // 模拟 AI 响应
-  setTimeout(() => {
-    // 轮换单词：每次用户回答后切换到下一个词
-    chatCurrentWordIndex++;
-    if (chatCurrentWordIndex >= selectedChatWords.length) {
-      chatCurrentWordIndex = 0; // 循环使用
-    }
-    
-    const nextWord = selectedChatWords[chatCurrentWordIndex];
-    
-    // 构建更有逻辑相关性的回复模板
-    const responses = [
-      `That's a very insightful point. Speaking of which, it reminds me of "${nextWord}". How do you see the connection between what you just said and this term?`,
-      `I see what you mean. In a similar vein, when we consider "${nextWord}", the situation becomes even more interesting. What's your take on that?`,
-      `Exactly! Your explanation perfectly leads us to our next topic: "${nextWord}". Based on your previous answer, how would you apply it here?`,
-      `I agree with your perspective. Furthermore, if we look at it through the lens of "${nextWord}", what new insights do you think we might gain?`,
-      `That's a solid argument. Transitioning slightly, how does "${nextWord}" fit into your understanding of this whole discussion?`
-    ];
-    
-    const response = responses[Math.floor(Math.random() * responses.length)];
-    appendChatMessage("ai", response);
-  }, 1000);
-}
-
-function generateCefrParagraph() {
-  const level = document.getElementById("cefrLevel").value;
-  const templates = CEFR_TEMPLATES[level] || CEFR_TEMPLATES.B1;
-  // 随机选择一条句子
-  cefrCurrentText = templates[Math.floor(Math.random() * templates.length)];
-  
-  // 重置 UI
-  document.getElementById("cefrPracticeArea").classList.remove("hidden");
-  document.getElementById("cefrDictationBox").classList.remove("hidden");
-  document.getElementById("cefrResult").classList.add("hidden");
-  document.getElementById("cefrInput").value = "";
-  
-  // 重置暂停按钮状态
-  document.getElementById("pauseCefrBtn").textContent = "⏸ 暂停";
-  
-  // 自动播放一次
-  speakCefrText();
-}
-
-function speakCefrText() {
-  if (!cefrCurrentText) return;
-  
-  // 如果正在播放，则先取消
-  window.speechSynthesis.cancel();
-  
-  const speed = parseFloat(document.getElementById("cefrSpeed").value) || 0.8;
-  const utterance = new SpeechSynthesisUtterance(cefrCurrentText);
-  utterance.lang = "en-US";
-  utterance.rate = speed; 
-  
-  window.speechSynthesis.speak(utterance);
-}
-
-function pauseCefrText() {
-  if (window.speechSynthesis.speaking) {
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-      document.getElementById("pauseCefrBtn").textContent = "⏸ 暂停";
-    } else {
-      window.speechSynthesis.pause();
-      document.getElementById("pauseCefrBtn").textContent = "▶ 继续";
-    }
-  }
-}
-
-
-function startCefrDictation() {
-  document.getElementById("cefrReadingBox").classList.add("hidden");
-  document.getElementById("cefrDictationBox").classList.remove("hidden");
-  document.getElementById("cefrInput").focus();
-}
-
-function checkCefrAccuracy() {
-  const input = document.getElementById("cefrInput").value.trim();
-  if (!input) {
-    showToast("请输入你记住的内容");
-    return;
-  }
-  
-  // 预处理：转小写并去除标点符号
-  const normalize = (text) => text.toLowerCase().replace(/[.,!?;:"]/g, "").split(/\s+/).filter(w => w.length > 0);
-  
-  const originalWordsRaw = cefrCurrentText.split(/\s+/);
-  const originalWords = normalize(cefrCurrentText);
-  const inputWords = normalize(input);
-  
-  let correctCount = 0;
-  // 为了渲染 diff，我们遍历原始单词（带标点）
-  const diffHtml = originalWordsRaw.map((word) => {
-    const cleanWord = word.toLowerCase().replace(/[.,!?;:"]/g, "");
-    const matchIndex = inputWords.indexOf(cleanWord);
-    
-    if (matchIndex !== -1) {
-      correctCount++;
-      // 匹配后从输入中移除，避免重复匹配
-      inputWords.splice(matchIndex, 1);
-      return `<span class="diff-correct">${word}</span>`;
-    } else {
-      return `<span class="diff-missing">${word}</span>`;
-    }
-  }).join(" ");
-  
-  const accuracy = Math.round((correctCount / originalWords.length) * 100);
-  document.getElementById("cefrAccuracy").textContent = `${accuracy}%`;
-  document.getElementById("cefrDiff").innerHTML = diffHtml;
-  document.getElementById("cefrResult").classList.remove("hidden");
-  
-  if (accuracy === 100) {
-    showToast("完美！一字不差！+30 XP");
-    addXP(30, "CEFR 满分听写");
-  } else if (accuracy > 80) {
-    showToast("很棒的记忆力！继续加油");
-    addXP(15, "CEFR 高分听写");
-  }
-}
-
 function initEvents() {
-  document.getElementById("lookupBtn").addEventListener("click", lookupFromInput);
-  document.getElementById("wordInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      lookupFromInput();
-    }
-  });
   document.getElementById("randomWordBtn").addEventListener("click", () => {
     setStudyMode("learn");
-    const w = pickRandomNewWord();
-    document.getElementById("wordInput").value = w;
-    addRecentSearch(w);
-    loadWord(w, true);
+    loadWord(pickRandomNewWord(), true);
   });
-
-  document.querySelectorAll(".nav-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const view = btn.dataset.view;
-      const panelId = {
-        review: "panelReview",
-        wordbank: "panelWordbank",
-        ai: "panelAI",
-        more: "panelMore",
-      }[view];
-      const panel = document.getElementById(panelId);
-      const isOpen = btn.classList.contains("active") && panel && !panel.classList.contains("hidden");
-      document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelectorAll(".bottom-panel").forEach((p) => p.classList.add("hidden"));
-      if (!isOpen) {
-        btn.classList.add("active");
-        panel.classList.remove("hidden");
-        if (view === "ai") renderSelectedWordsChips();
-      }
-    });
+  document.getElementById("prevWordBtn").addEventListener("click", () => {
+    if (historyIndex > 0) loadWord(wordHistory[--historyIndex], false);
   });
-
-  // AI 练习子 Tab 切换
-  document.querySelectorAll('#panelAI .tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('#panelAI .tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.dataset.tab;
-      
-      // 切换显示内容
-      const isChat = target === 'aiChat';
-      document.getElementById('chatWordSelector').classList.toggle('hidden', !isChat);
-      document.getElementById('subPanelAiCefr').classList.toggle('hidden', isChat);
-      
-      // 如果切换到 CEFR，强制隐藏聊天界面
-      if (!isChat) {
-        document.getElementById('chatInterface').classList.add('hidden');
-      }
-    });
+  document.getElementById("nextWordBtn").addEventListener("click", () => {
+    if (historyIndex < wordHistory.length - 1)
+      loadWord(wordHistory[++historyIndex], false);
   });
-
-  document.getElementById("startChatBtn").addEventListener("click", startAiChat);
-  document.getElementById("chatWordInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      addChatWordFromInput();
-    }
-  });
-  document.getElementById("sendChatBtn").addEventListener("click", handleChatSend);
-  document.getElementById("chatInput").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") handleChatSend();
-  });
-  document.getElementById("exitChatBtn").addEventListener("click", () => {
-    document.getElementById("chatWordSelector").classList.remove("hidden");
-    document.getElementById("chatInterface").classList.add("hidden");
-  });
-
-  document.getElementById("generateCefrBtn").addEventListener("click", generateCefrParagraph);
-  document.getElementById("playCefrBtn").addEventListener("click", speakCefrText);
-   document.getElementById("pauseCefrBtn").addEventListener("click", pauseCefrText);
-   document.getElementById("submitCefrBtn").addEventListener("click", checkCefrAccuracy);
-  document.getElementById("resetCefrBtn").addEventListener("click", generateCefrParagraph);
-
-  const cefrSpeed = document.getElementById("cefrSpeed");
-  if (cefrSpeed) {
-    cefrSpeed.addEventListener("input", () => {
-      document.getElementById("speedValue").textContent = cefrSpeed.value;
-    });
-  }
-
   document.getElementById("playAudioBtn").addEventListener("click", playAudio);
   document.getElementById("playAudioReviewBtn").addEventListener("click", playAudio);
   document.getElementById("favoriteBtn").addEventListener("click", toggleFavorite);
@@ -1363,7 +974,6 @@ function initEvents() {
     if (due.length) {
       setStudyMode("review");
       loadWord(due[0], true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
   document.getElementById("startQuizBtn").addEventListener("click", startWeeklyQuiz);
@@ -1399,17 +1009,14 @@ function initEvents() {
 }
 
 function init() {
-  if (!state.recentSearches) state.recentSearches = [];
   resetTodayIfNeeded();
   setStudyMode("learn");
   updateProgressUI();
   updateGamificationUI();
   restoreMoodUI();
   renderWordList();
-  renderRecentSearches();
   initEvents();
-  showIdleCard();
-  document.getElementById("wordInput").focus();
+  loadWord(pickRandomNewWord(), true);
 }
 
 init();
