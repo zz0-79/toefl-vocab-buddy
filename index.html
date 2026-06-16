@@ -10,7 +10,30 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
+  <!-- 强制登录界面 -->
+  <div id="authOverlay" class="auth-overlay">
+    <div class="auth-modal">
+      <h2>📖 词途</h2>
+      <p class="auth-subtitle">TOEFL 词汇学习伙伴</p>
+      
+      <div id="loginForm" class="auth-form">
+        <input type="text" id="loginUsername" placeholder="用户名" autocomplete="username" />
+        <input type="password" id="loginPassword" placeholder="密码" autocomplete="current-password" />
+        <button type="button" id="loginBtn" class="btn btn-primary btn-block">登录</button>
+        <p class="auth-switch">还没有账号？<a href="#" id="goToRegister">立即注册</a></p>
+      </div>
+      
+      <div id="registerForm" class="auth-form hidden">
+        <input type="text" id="registerUsername" placeholder="设置用户名" autocomplete="username" />
+        <input type="password" id="registerPassword" placeholder="设置密码" autocomplete="new-password" />
+        <input type="password" id="registerPasswordConfirm" placeholder="确认密码" autocomplete="new-password" />
+        <button type="button" id="registerBtn" class="btn btn-primary btn-block">注册</button>
+        <p class="auth-switch">已有账号？<a href="#" id="goToLogin">返回登录</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainApp" class="app hidden">
     <header class="header">
       <div class="brand">
         <span class="logo" aria-hidden="true">📖</span>
@@ -36,6 +59,7 @@
           <span>/ <span id="goalDisplay">3</span></span>
         </div>
         <button type="button" id="checkInBtn" class="btn btn-checkin">今日打卡</button>
+        <button type="button" id="userBtn" class="btn btn-ghost">👤 用户</button>
       </div>
     </header>
 
@@ -195,6 +219,17 @@
     <footer class="footer">
       <p>为渴望进步的小李设计 · 艾宾浩斯 + 游戏化 · 数据保存在本机浏览器</p>
     </footer>
+  </div>
+
+  <!-- 用户中心 -->
+  <div id="userModal" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>用户中心</h3>
+      <p class="user-info">欢迎，<strong id="displayUsername">用户</strong>！</p>
+      <p class="user-info">角色：<strong id="displayRole">普通用户</strong></p>
+      <hr />
+      <button type="button" id="logoutBtn" class="btn btn-danger btn-block">退出登录</button>
+    </div>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

@@ -5,6 +5,216 @@
 
 const STORAGE_KEY = "toefl_vocab_buddy_v2";
 const STORAGE_KEY_V1 = "toefl_vocab_buddy_v1";
+const USERS_KEY = "toefl_users";
+const CURRENT_USER_KEY = "toefl_current_user";
+
+/* === 用户系统 === */
+let currentUser = null;
+let userState = null;
+
+function getUsers() {
+  try {
+    const raw = localStorage.getItem(USERS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    return raw || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function setCurrentUser(username) {
+  if (username) {
+    localStorage.setItem(CURRENT_USER_KEY, username);
+  } else {
+    localStorage.removeItem(CURRENT_USER_KEY);
+  }
+}
+
+function getUserStateKey(username) {
+  return `toefl_state_${username}`;
+}
+
+function loadUserState(username) {
+  try {
+    const raw = localStorage.getItem(getUserStateKey(username));
+    if (raw) {
+      const s = { ...defaultState(), ...JSON.parse(raw) };
+      if (!s.wordSRS) s.wordSRS = {};
+      return s;
+    }
+  } catch (_) {}
+  return defaultState();
+}
+
+function saveUserState(username, userState) {
+  localStorage.setItem(getUserStateKey(username), JSON.stringify(userState));
+}
+
+function register(username, password) {
+  const users = getUsers();
+  if (users[username]) {
+    return { success: false, message: "用户名已存在" };
+  }
+  users[username] = { password, isMember: false, registeredAt: new Date().toISOString() };
+  saveUsers(users);
+  const initialState = defaultState();
+  saveUserState(username, initialState);
+  return { success: true };
+}
+
+function login(username, password) {
+  const users = getUsers();
+  if (!users[username]) {
+    return { success: false, message: "用户不存在" };
+  }
+  if (users[username].password !== password) {
+    return { success: false, message: "密码错误" };
+  }
+  currentUser = { username, isMember: users[username].isMember };
+  userState = loadUserState(username);
+  setCurrentUser(username);
+  return { success: true };
+}
+
+function logout() {
+  if (currentUser && userState) {
+    saveUserState(currentUser.username, userState);
+  }
+  currentUser = null;
+  userState = null;
+  setCurrentUser(null);
+  showAuthScreen();
+}
+
+function showAuthScreen() {
+  document.getElementById("authOverlay").classList.remove("hidden");
+  document.getElementById("mainApp").classList.add("hidden");
+}
+
+function showMainApp() {
+  document.getElementById("authOverlay").classList.add("hidden");
+  document.getElementById("mainApp").classList.remove("hidden");
+  state = userState;
+  updateProgressUI();
+  updateGamificationUI();
+  renderBadges();
+  renderWordList();
+}
+
+function initAuthEvents() {
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+  const goToRegister = document.getElementById("goToRegister");
+  const goToLogin = document.getElementById("goToLogin");
+  const userBtn = document.getElementById("userBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const userModal = document.getElementById("userModal");
+
+  if (goToRegister) {
+    goToRegister.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("loginForm").classList.add("hidden");
+      document.getElementById("registerForm").classList.remove("hidden");
+    });
+  }
+
+  if (goToLogin) {
+    goToLogin.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("registerForm").classList.add("hidden");
+      document.getElementById("loginForm").classList.remove("hidden");
+    });
+  }
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      const username = document.getElementById("loginUsername").value.trim();
+      const password = document.getElementById("loginPassword").value;
+      
+      if (!username || !password) {
+        showToast("请填写用户名和密码");
+        return;
+      }
+      
+      const result = login(username, password);
+      if (result.success) {
+        showToast("登录成功！");
+        document.getElementById("displayUsername").textContent = username;
+        document.getElementById("displayRole").textContent = currentUser.isMember ? "会员用户" : "普通用户";
+        showMainApp();
+      } else {
+        showToast(result.message);
+      }
+    });
+  }
+
+  if (registerBtn) {
+    registerBtn.addEventListener("click", () => {
+      const username = document.getElementById("registerUsername").value.trim();
+      const password = document.getElementById("registerPassword").value;
+      const passwordConfirm = document.getElementById("registerPasswordConfirm").value;
+      
+      if (!username || !password) {
+        showToast("请填写用户名和密码");
+        return;
+      }
+      
+      if (password !== passwordConfirm) {
+        showToast("两次密码输入不一致");
+        return;
+      }
+      
+      const result = register(username, password);
+      if (result.success) {
+        showToast("注册成功！请登录");
+        document.getElementById("registerForm").classList.add("hidden");
+        document.getElementById("loginForm").classList.remove("hidden");
+        document.getElementById("loginUsername").value = username;
+        document.getElementById("loginPassword").value = password;
+      } else {
+        showToast(result.message);
+      }
+    });
+  }
+
+  if (userBtn) {
+    userBtn.addEventListener("click", () => {
+      if (currentUser) {
+        document.getElementById("displayUsername").textContent = currentUser.username;
+        document.getElementById("displayRole").textContent = currentUser.isMember ? "会员用户" : "普通用户";
+      }
+      userModal.classList.remove("hidden");
+    });
+  }
+
+  if (userModal) {
+    userModal.addEventListener("click", (e) => {
+      if (e.target === userModal) {
+        userModal.classList.add("hidden");
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      userModal.classList.add("hidden");
+      logout();
+      showToast("已退出登录");
+    });
+  }
+}
 
 /** 复习间隔（天）：对应 24h内、一周内、7天、14天巩固 */
 const SRS_INTERVALS = [1, 3, 7, 14, 30];
@@ -172,6 +382,10 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (currentUser && userState) {
+    userState = state;
+    saveUserState(currentUser.username, userState);
+  }
 }
 
 function todayStr() {
@@ -1009,14 +1223,31 @@ function initEvents() {
 }
 
 function init() {
-  resetTodayIfNeeded();
-  setStudyMode("learn");
-  updateProgressUI();
-  updateGamificationUI();
-  restoreMoodUI();
-  renderWordList();
-  initEvents();
-  loadWord(pickRandomNewWord(), true);
+  initAuthEvents();
+  
+  const savedUser = getCurrentUser();
+  if (savedUser) {
+    const users = getUsers();
+    if (users[savedUser]) {
+      currentUser = { username: savedUser, isMember: users[savedUser].isMember };
+      userState = loadUserState(savedUser);
+      state = userState;
+      document.getElementById("displayUsername").textContent = savedUser;
+      document.getElementById("displayRole").textContent = currentUser.isMember ? "会员用户" : "普通用户";
+      showMainApp();
+      resetTodayIfNeeded();
+      setStudyMode("learn");
+      updateProgressUI();
+      updateGamificationUI();
+      restoreMoodUI();
+      renderWordList();
+      initEvents();
+      loadWord(pickRandomNewWord(), true);
+      return;
+    }
+  }
+  
+  showAuthScreen();
 }
 
 init();
